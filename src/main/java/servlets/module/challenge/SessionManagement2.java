@@ -138,21 +138,11 @@ public class SessionManagement2 extends HttpServlet {
                   + "</a>"
                   + "</p>";
         } else {
-          log.debug("Incorrect credentials, checking if user name correct");
-          callstmt = conn.prepareStatement("SELECT userAddress FROM users WHERE userName = ?");
-          callstmt.setString(1, subName);
-          log.debug("Executing getAddress");
-          resultSet = callstmt.executeQuery();
-          if (resultSet.next()) {
-            log.debug("User Found");
-            userAddress =
-                bundle.getString("response.badPass")
-                    + " <a>"
-                    + Encode.forHtml(resultSet.getString(1))
-                    + "</a><br/>";
-          } else {
-            userAddress = bundle.getString("response.badUser") + "<br/>";
-          }
+          // One message for every failure. Confirming the user name and handing back the
+          // address on file let an attacker enumerate accounts and collect the address the
+          // password reset endpoint keys on (ASVS 3.2.3, 7.2.1).
+          log.debug("Incorrect credentials");
+          userAddress = bundle.getString("response.badCredentials") + "<br/>";
           htmlOutput = makeTable(userAddress, bundle);
         }
         Database.closeConnection(conn);
