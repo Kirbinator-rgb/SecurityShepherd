@@ -42,6 +42,9 @@ public class SessionManagement1 extends HttpServlet {
       "dfd6bfba1033fa380e378299b6a998c759646bd8aea02511482b8ce5d707f93a";
   private static String levelResult = "db7b1da5d7a43c7100a6f01bb0c";
 
+  /** Session attribute holding this sub-application's role. Server-owned; never client-settable. */
+  private static final String SUB_APP_ROLE = "sessionManagement1SubAppRole";
+
   /**
    * Users must take advance of the broken session management in this application by modifying the
    * tracking cookie "checksum" which is encoded in base 64. They must modify this cookie to be
@@ -75,10 +78,17 @@ public class SessionManagement1 extends HttpServlet {
             request.getHeader("X-Forwarded-For"),
             ses.getAttribute("userName").toString());
         log.debug(levelName + " servlet accessed by: " + ses.getAttribute("userName").toString());
-        // Role is read from the server-side session, which only the login servlet writes.
-        // The previous "checksum" cookie let the client assert its own role.
+        // The sub-application's role is server-owned: it is initialised to guest and nothing
+        // in the request can promote it. The old "checksum" cookie let the client assert its
+        // own role, and keying off Shepherd's admin role would just move the trust, since a
+        // real administrator is not an administrator of this sub-application.
+        String subAppRole = (String) ses.getAttribute(SUB_APP_ROLE);
+        if (subAppRole == null) {
+          subAppRole = "guest";
+          ses.setAttribute(SUB_APP_ROLE, subAppRole);
+        }
         String htmlOutput = null;
-        if (Validate.validateAdminSession(ses)) {
+        if ("administrator".equals(subAppRole)) {
           log.debug("Administrator session confirmed");
           // Get key and add it to the output
           String userKey =

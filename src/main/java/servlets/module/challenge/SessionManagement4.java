@@ -42,6 +42,9 @@ public class SessionManagement4 extends HttpServlet {
       "ec43ae137b8bf7abb9c85a87cf95c23f7fadcf08a092e05620c9968bd60fcba6";
   private static String levelResult = "238a43b12dde07f39d14599a780ae90f87a23e";
 
+  /** Session attribute holding this sub-application's role. Server-owned; never client-settable. */
+  private static final String SUB_APP_ROLE = "sessionManagement4SubAppRole";
+
   /**
    * Users must discover the session id for this sub application is very weak. The default session
    * ID for a guest will be 00000001 base64'd. The admin's session will be 00000021
@@ -74,10 +77,16 @@ public class SessionManagement4 extends HttpServlet {
             request.getHeader("X-Forwarded-For"),
             ses.getAttribute("userName").toString());
         log.debug(levelName + " servlet accessed by: " + ses.getAttribute("userName").toString());
-        // Session identity comes from the server-side session, not from a base64 "SubSessionID"
-        // cookie the client can re-encode at will.
+        // The sub-application's session identity is server-owned: it is initialised to guest
+        // and nothing in the request can promote it. The old "SubSessionID" cookie was just a
+        // double-base64 integer the client could re-encode at will.
+        String subAppRole = (String) ses.getAttribute(SUB_APP_ROLE);
+        if (subAppRole == null) {
+          subAppRole = "guest";
+          ses.setAttribute(SUB_APP_ROLE, subAppRole);
+        }
         String htmlOutput = null;
-        if (Validate.validateAdminSession(ses)) {
+        if ("administrator".equals(subAppRole)) {
           log.debug("Admin Session Detected: Challenge Complete");
           // Get key and add it to the output
           String userKey =

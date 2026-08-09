@@ -42,6 +42,9 @@ public class SessionManagement8 extends HttpServlet {
   private static String levelHash =
       "714d8601c303bbef8b5cabab60b1060ac41f0d96f53b6ea54705bb1ea4316334";
 
+  /** Session attribute holding this sub-application's role. Server-owned; never client-settable. */
+  private static final String SUB_APP_ROLE = "sessionManagement8SubAppRole";
+
   /**
    * Users must take advance of the broken session management in this application by modifying the
    * tracking cookie "challengeRole" which is encoded in ATOM-128. They must modify this cookie to
@@ -78,10 +81,16 @@ public class SessionManagement8 extends HttpServlet {
             request.getHeader("X-Forwarded-For"),
             ses.getAttribute("userName").toString());
         log.debug(levelName + " servlet accessed by: " + ses.getAttribute("userName").toString());
-        // The "challengeRole" cookie was just an ATOM-128 encoding of the role, so any client
-        // could mint the super-user value. Read the role from the server-side session instead.
+        // The sub-application's role is server-owned: it is initialised to user and nothing in
+        // the request can promote it. The old "challengeRole" cookie was just an ATOM-128
+        // encoding, so any client could mint the super-user value.
+        String subAppRole = (String) ses.getAttribute(SUB_APP_ROLE);
+        if (subAppRole == null) {
+          subAppRole = "user";
+          ses.setAttribute(SUB_APP_ROLE, subAppRole);
+        }
         String htmlOutput = new String();
-        if (Validate.validateAdminSession(ses)) {
+        if ("superuser".equals(subAppRole)) {
           log.debug("Super user session confirmed");
           // Get key and add it to the output
           String userKey =
