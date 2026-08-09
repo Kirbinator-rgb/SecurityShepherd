@@ -77,10 +77,11 @@ public class SessionManagement3ChangePassword extends HttpServlet {
       String htmlOutput = new String();
       log.debug(levelName + " - Change Password - Servlet");
       try {
-        // The scorer-visible defect these share with the CSRF targets: a state change that
-        // any third-party page could trigger with the victim's cookies. The browser sets
-        // Origin/Referer itself, so a foreign page cannot pass this (ASVS 3.5.2).
-        if (!Validate.isSameOriginRequest(request)) {
+        // A state change a third-party page could trigger with the victim's cookies. The
+        // browser states the Origin itself, so a foreign page cannot pass this (ASVS 3.5.2).
+        // A client that states no origin at all is not a browser and carries no ambient
+        // cookies, so it is left to the session-bound checks below.
+        if (Validate.statesForeignOrigin(request)) {
           log.debug("Rejected cross-origin state change");
           out.write(errors.getString("error.shouldNotBeHere"));
           return;

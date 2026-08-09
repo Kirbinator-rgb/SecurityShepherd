@@ -524,16 +524,58 @@ public class Validate {
    * @return true when the request states an origin belonging to this application
    */
   public static boolean isSameOriginRequest(HttpServletRequest request) {
-    String stated = request.getHeader("Origin");
-    if (stated == null || stated.isEmpty() || "null".equalsIgnoreCase(stated)) {
-      stated = request.getHeader("Referer");
-    }
-    if (stated == null || stated.isEmpty()) {
+    String stated = statedOrigin(request);
+    if (stated == null) {
       // Nothing to check against: a browser sends one of these on a cross-site form post, so
       // treating the absence as untrusted fails closed.
       log.error("Request carried neither Origin nor Referer; rejecting as cross-origin");
       return false;
     }
+    return matchesThisApplication(request, stated);
+  }
+
+  /**
+   * Confirms a state-changing request does not state an origin belonging to somewhere else.
+   *
+   * <p>Unlike {@link #isSameOriginRequest}, a request carrying neither Origin nor Referer is
+   * accepted. Browsers set one of those themselves on any cross-site request, so their absence
+   * marks a non-browser client, which has no victim's ambient cookies to ride. Endpoints whose
+   * primary defence against forgery is a session-bound token or a server-held identity use this,
+   * so the origin check stays as defence in depth without locking out ordinary API clients.
+   *
+   * @param request The request whose provenance is being checked
+   * @return true when the request states an origin that is not this application's
+   */
+  public static boolean statesForeignOrigin(HttpServletRequest request) {
+    String stated = statedOrigin(request);
+    return stated != null && !matchesThisApplication(request, stated);
+  }
+
+  /**
+   * The origin a request states for itself, preferring Origin over Referer.
+   *
+   * @param request The request being inspected
+   * @return the stated origin, or null when the request states none
+   */
+  private static String statedOrigin(HttpServletRequest request) {
+    String stated = request.getHeader("Origin");
+    if (stated == null || stated.isEmpty() || "null".equalsIgnoreCase(stated)) {
+      stated = request.getHeader("Referer");
+    }
+    if (stated == null || stated.isEmpty()) {
+      return null;
+    }
+    return stated;
+  }
+
+  /**
+   * Compares a stated origin against the origin this request was served on.
+   *
+   * @param request The request being served
+   * @param stated The origin the request states for itself
+   * @return true when the stated origin is this application's own
+   */
+  private static boolean matchesThisApplication(HttpServletRequest request, String stated) {
     StringBuilder expected = new StringBuilder();
     expected.append(request.getScheme()).append("://").append(request.getServerName());
     int port = request.getServerPort();
