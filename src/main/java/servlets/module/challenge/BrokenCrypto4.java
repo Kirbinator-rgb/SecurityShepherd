@@ -44,6 +44,7 @@ public class BrokenCrypto4 extends HttpServlet {
   private static final String levelName = new String("Broken Crypto 4");
   private static final String levelHash =
       new String("b927fc4d8c9f70a78f8b6fc46a0cc18533a88b2363054a1f391fe855954d12f9");
+
   /**
    * VIP standing for this shop, held server-side. The shop has no enrolment path, so nothing in a
    * request can set it — which is the point: possession of a coupon code is not authorisation.
