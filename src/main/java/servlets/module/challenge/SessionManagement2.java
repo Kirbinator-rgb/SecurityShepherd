@@ -138,11 +138,21 @@ public class SessionManagement2 extends HttpServlet {
                   + "</a>"
                   + "</p>";
         } else {
-          // One message for every failure. Naming the account, or handing back its address,
-          // told an attacker which usernames exist and gave them the address the password
-          // reset endpoint keys on.
-          log.debug("Incorrect credentials");
-          userAddress = bundle.getString("response.badCredentials") + "<br/>";
+          log.debug("Incorrect credentials, checking if user name correct");
+          callstmt = conn.prepareStatement("SELECT userAddress FROM users WHERE userName = ?");
+          callstmt.setString(1, subName);
+          log.debug("Executing getAddress");
+          resultSet = callstmt.executeQuery();
+          if (resultSet.next()) {
+            log.debug("User Found");
+            userAddress =
+                bundle.getString("response.badPass")
+                    + " <a>"
+                    + Encode.forHtml(resultSet.getString(1))
+                    + "</a><br/>";
+          } else {
+            userAddress = bundle.getString("response.badUser") + "<br/>";
+          }
           htmlOutput = makeTable(userAddress, bundle);
         }
         Database.closeConnection(conn);

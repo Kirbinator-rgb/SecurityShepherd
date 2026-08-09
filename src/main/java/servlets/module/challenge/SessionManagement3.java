@@ -47,12 +47,6 @@ public class SessionManagement3 extends HttpServlet {
       "t193c6634f049bcf65cdcac72269eeac25dbb2a6887bdb38873e57d0ef447bc3";
   private static String levelResult = "e62008dc47f5eb065229d48963";
 
-  /**
-   * Session attribute holding the user signed in to this sub-application. Server-owned; written
-   * only on a successful authentication here.
-   */
-  protected static final String SUB_APP_USER = "sessionManagement3SubAppUser";
-
   public static String getLevelHash() {
     return levelHash;
   }
@@ -125,6 +119,7 @@ public class SessionManagement3 extends HttpServlet {
         log.debug("Executing findUser");
         ResultSet resultSet = callstmt.executeQuery();
         if (resultSet.next()) {
+          log.debug("User found");
           if (resultSet.getString(3).equalsIgnoreCase("admin")) {
             log.debug("Admin Detected");
             callstmt =
@@ -137,9 +132,6 @@ public class SessionManagement3 extends HttpServlet {
             ResultSet resultSet2 = callstmt.executeQuery();
             if (resultSet2.next()) {
               log.debug("Successful Admin Login");
-              // The signed-in identity is recorded server-side so the change-password servlet
-              // does not have to take the client's word for whose password it is changing.
-              ses.setAttribute(SUB_APP_USER, resultSet2.getString(1));
               // Get key and add it to the output
               String userKey =
                   Hash.generateUserSolution(levelResult, (String) ses.getAttribute("userName"));
@@ -157,16 +149,15 @@ public class SessionManagement3 extends HttpServlet {
                       + "</a>"
                       + "</p>";
             } else {
-              // Do not name the account or hand back its address on a failed sign in.
-              log.debug("Incorrect credentials");
-              userAddress = bundle.getString("response.badCredentials") + "<br/>";
+              userAddress =
+                  bundle.getString("response.badPass")
+                      + " <a>"
+                      + Encode.forHtml(resultSet.getString(1))
+                      + "</a><br/>";
               htmlOutput = makeTable(userAddress, bundle);
             }
           } else {
             log.debug("Successful Guest Login");
-            // Guest accounts sign in without a password by design; record who that is so the
-            // change-password servlet can scope the reset to them.
-            ses.setAttribute(SUB_APP_USER, resultSet.getString(1));
             htmlOutput =
                 makeTable(bundle)
                     + "<h2 class='title'>"
@@ -177,10 +168,7 @@ public class SessionManagement3 extends HttpServlet {
                     + "</p><br/><br/>";
           }
         } else {
-          // One message for every failure, so the response cannot be used to tell which user
-          // names exist.
-          log.debug("Incorrect credentials");
-          userAddress = bundle.getString("response.badCredentials") + "<br/>";
+          userAddress = bundle.getString("response.badUser") + "<br/>";
           htmlOutput = makeTable(userAddress, bundle);
         }
         Database.closeConnection(conn);
