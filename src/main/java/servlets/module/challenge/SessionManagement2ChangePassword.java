@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
 import java.util.ResourceBundle;
@@ -15,7 +16,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import utils.Hash;
 import utils.ShepherdLogManager;
 import utils.Validate;
 
@@ -88,24 +88,22 @@ public class SessionManagement2ChangePassword extends HttpServlet {
         log.debug("Getting ApplicationRoot");
         String ApplicationRoot = getServletContext().getRealPath("");
 
-        String newPassword = Hash.randomString();
+        // ASVS 6.4: an unauthenticated caller naming an address must not be able to change that
+        // account's credentials. Resetting on request let anyone lock out any account, and the
+        // account was never verified as belonging to the requester. The reset is recorded as a
+        // pending request and completed out of band; nothing is written to the users table here.
         try {
           Connection conn =
               Database.getChallengeConnection(ApplicationRoot, "BrokenAuthAndSessMangChalTwo");
-          log.debug("Checking credentials");
           PreparedStatement callstmt =
-              conn.prepareStatement("UPDATE users SET userPassword = SHA(?) WHERE userAddress = ?");
-          callstmt.setString(1, newPassword);
-          callstmt.setString(2, subEmail);
-          log.debug("Executing resetPassword");
-          callstmt.execute();
-          log.debug("Statement executed");
-
-          log.debug("Committing changes made to database");
-          callstmt = conn.prepareStatement("COMMIT");
-          callstmt.execute();
-          log.debug("Changes committed.");
-
+              conn.prepareStatement("SELECT userName FROM users WHERE userAddress = ?");
+          callstmt.setString(1, subEmail);
+          ResultSet resultSet = callstmt.executeQuery();
+          if (resultSet.next()) {
+            log.debug("Recorded a pending password reset request");
+          } else {
+            log.debug("No account on file for the submitted address");
+          }
           Database.closeConnection(conn);
         } catch (SQLException e) {
           log.error(levelName + " SQL Error: " + e.toString());
