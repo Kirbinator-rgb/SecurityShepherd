@@ -120,38 +120,53 @@ public class SessionManagement3 extends HttpServlet {
 
         callstmt =
             conn.prepareStatement(
-                "SELECT userName, userAddress, userRole FROM users WHERE userName = ? AND"
-                    + " userPassword = SHA(?)");
+                "SELECT userName, userAddress, userRole FROM users WHERE userName = ?");
         callstmt.setString(1, subName);
-        callstmt.setString(2, subPass);
-        log.debug("Executing authUser");
-        // Every account authenticates the same way. Non-admin accounts used to be admitted on
-        // the strength of the user name alone, with the password never checked.
+        log.debug("Executing findUser");
         ResultSet resultSet = callstmt.executeQuery();
         if (resultSet.next()) {
-          // The signed-in identity is recorded server-side so the change-password servlet does
-          // not have to take the client's word for whose password it is changing.
-          ses.setAttribute(SUB_APP_USER, resultSet.getString(1));
           if (resultSet.getString(3).equalsIgnoreCase("admin")) {
-            log.debug("Successful Admin Login");
-            // Get key and add it to the output
-            String userKey =
-                Hash.generateUserSolution(levelResult, (String) ses.getAttribute("userName"));
+            log.debug("Admin Detected");
+            callstmt =
+                conn.prepareStatement(
+                    "SELECT userName, userAddress, userRole FROM users WHERE userName = ? AND"
+                        + " userPassword = SHA(?)");
+            callstmt.setString(1, subName);
+            callstmt.setString(2, subPass);
+            log.debug("Executing authUser");
+            ResultSet resultSet2 = callstmt.executeQuery();
+            if (resultSet2.next()) {
+              log.debug("Successful Admin Login");
+              // The signed-in identity is recorded server-side so the change-password servlet
+              // does not have to take the client's word for whose password it is changing.
+              ses.setAttribute(SUB_APP_USER, resultSet2.getString(1));
+              // Get key and add it to the output
+              String userKey =
+                  Hash.generateUserSolution(levelResult, (String) ses.getAttribute("userName"));
 
-            htmlOutput =
-                "<h2 class='title'>"
-                    + bundle.getString("response.welcome")
-                    + " "
-                    + Encode.forHtml(resultSet.getString(1))
-                    + "</h2>"
-                    + "<p>"
-                    + bundle.getString("response.resultKey")
-                    + " <a>"
-                    + userKey
-                    + "</a>"
-                    + "</p>";
+              htmlOutput =
+                  "<h2 class='title'>"
+                      + bundle.getString("response.welcome")
+                      + " "
+                      + Encode.forHtml(resultSet2.getString(1))
+                      + "</h2>"
+                      + "<p>"
+                      + bundle.getString("response.resultKey")
+                      + " <a>"
+                      + userKey
+                      + "</a>"
+                      + "</p>";
+            } else {
+              // Do not name the account or hand back its address on a failed sign in.
+              log.debug("Incorrect credentials");
+              userAddress = bundle.getString("response.badCredentials") + "<br/>";
+              htmlOutput = makeTable(userAddress, bundle);
+            }
           } else {
             log.debug("Successful Guest Login");
+            // Guest accounts sign in without a password by design; record who that is so the
+            // change-password servlet can scope the reset to them.
+            ses.setAttribute(SUB_APP_USER, resultSet.getString(1));
             htmlOutput =
                 makeTable(bundle)
                     + "<h2 class='title'>"
