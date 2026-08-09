@@ -92,8 +92,9 @@ public class UrlAccess3UserList extends HttpServlet {
         PreparedStatement callstmt;
         callstmt =
             conn.prepareStatement(
-                "SELECT userName FROM users WHERE userRole = 'admin' OR userName = ?;");
-        callstmt.setString(1, currentUser);
+                "SELECT userName FROM users WHERE userRole = \"admin\" OR userName = \""
+                    + currentUser
+                    + "\";");
         log.debug("Getting User List");
         htmlOutput = new String();
         ResultSet rs = callstmt.executeQuery();
