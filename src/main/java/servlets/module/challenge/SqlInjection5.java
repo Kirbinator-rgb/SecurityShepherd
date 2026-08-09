@@ -45,10 +45,6 @@ public class SqlInjection5 extends HttpServlet {
       "8edf0a8ed891e6fef1b650935a6c46b03379a0eebab36afcd1d9076f65d4ce62";
   private static String levelSolution =
       "343f2e424d5d7a2eff7f9ee5a5a72fd97d5a19ef7bff3ef2953e033ea32dd7ee";
-
-  /** VIP standing, held server-side. Nothing in a request can grant it. */
-  private static final String VIP_STATUS = "sqlInjection5VipStatus";
-
   private static final long serialVersionUID = 1L;
   private static final Logger log = LogManager.getLogger(SqlInjection5.class);
 
@@ -99,22 +95,16 @@ public class SqlInjection5 extends HttpServlet {
         Connection conn =
             Database.getChallengeConnection(applicationRoot, "SqlInjectionChallenge5Shop");
         log.debug("Looking for Coupons");
-        // VIP coupons are redeemable only by a VIP session. The shop used to union the VIP
-        // table in for everyone, so anyone holding a VIP code could redeem it (ASVS 8.2.1).
-        boolean vipSession = "vip".equals(ses.getAttribute(VIP_STATUS));
-        PreparedStatement prepstmt;
-        if (vipSession) {
-          prepstmt =
-              conn.prepareStatement(
-                  "SELECT itemId, perCentOff FROM coupons WHERE couponCode = ?"
-                      + " UNION SELECT itemId, perCentOff FROM vipCoupons WHERE couponCode = ?");
-          prepstmt.setString(1, couponCode);
-          prepstmt.setString(2, couponCode);
-        } else {
-          prepstmt =
-              conn.prepareStatement("SELECT itemId, perCentOff FROM coupons WHERE couponCode = ?");
-          prepstmt.setString(1, couponCode);
-        }
+        // Redemption of a code the customer already holds is the shop's normal business. The
+        // defect this level teaches is not redemption, it is that the coupon lookup endpoints
+        // concatenated the submitted code into their SQL, letting anyone read the vipCoupons
+        // table out of the database and learn the code in the first place (ASVS 5.3.4).
+        PreparedStatement prepstmt =
+            conn.prepareStatement(
+                "SELECT itemId, perCentOff FROM coupons WHERE couponCode = ?"
+                    + " UNION SELECT itemId, perCentOff FROM vipCoupons WHERE couponCode = ?");
+        prepstmt.setString(1, couponCode);
+        prepstmt.setString(2, couponCode);
         ResultSet coupons = prepstmt.executeQuery();
         try {
           if (coupons.next()) {
