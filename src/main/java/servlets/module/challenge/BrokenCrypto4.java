@@ -44,6 +44,10 @@ public class BrokenCrypto4 extends HttpServlet {
   private static final String levelName = new String("Broken Crypto 4");
   private static final String levelHash =
       new String("b927fc4d8c9f70a78f8b6fc46a0cc18533a88b2363054a1f391fe855954d12f9");
+
+  /** VIP standing, held server-side. Nothing in a request can grant it. */
+  private static final String VIP_STATUS = "brokenCrypto4VipStatus";
+
   private static final long serialVersionUID = 1L;
   private static final Logger log = LogManager.getLogger(BrokenCrypto4.class);
 
@@ -102,6 +106,13 @@ public class BrokenCrypto4 extends HttpServlet {
         ResultSet coupons = prepstmt.executeQuery();
         try {
           if (coupons.next()) {
+            // A coupon may not take a line to nothing unless the session actually holds VIP
+            // standing. The 100% VIP code is a shared secret sitting in the shop's own data, so
+            // treating possession of it as authorisation is the flaw (ASVS 8.2.1, 2.3).
+            if (coupons.getInt(2) >= 100 && !"vip".equals(ses.getAttribute(VIP_STATUS))) {
+              log.debug("Refused a full-price discount for a session without VIP standing");
+              throw new IllegalArgumentException("Coupon not valid for this account");
+            }
             if (coupons.getInt(1) == 1) // Pineapple
             {
               log.debug("Found coupon for %" + coupons.getInt(2) + " off Pineapple");
