@@ -3,8 +3,8 @@ package servlets.module.challenge;
 import dbProcs.Database;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.CallableStatement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Locale;
@@ -78,7 +78,12 @@ public class SqlInjectionStoredProcedure extends HttpServlet {
         log.debug("Getting Connection to Database");
         Connection conn =
             Database.getChallengeConnection(ApplicationRoot, "SqlChallengeStoredProc");
-        CallableStatement callstmt = conn.prepareCall("CALL findUser(?)");
+        // Bound rather than concatenated, so the procedure receives the address as one value
+        // however it is punctuated (ASVS 5.3.4). A PreparedStatement is used in preference to
+        // prepareCall because CallableStatement makes the driver read the procedure's
+        // definition first, and this challenge's account is granted EXECUTE on findUser and
+        // nothing else.
+        PreparedStatement callstmt = conn.prepareStatement("CALL findUser(?)");
         callstmt.setString(1, userIdentity);
         ResultSet resultSet = callstmt.executeQuery();
 
