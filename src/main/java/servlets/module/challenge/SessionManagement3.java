@@ -47,6 +47,12 @@ public class SessionManagement3 extends HttpServlet {
       "t193c6634f049bcf65cdcac72269eeac25dbb2a6887bdb38873e57d0ef447bc3";
   private static String levelResult = "e62008dc47f5eb065229d48963";
 
+  /**
+   * Session attribute holding the user signed in to this sub-application. Server-owned; written
+   * only on a successful authentication here.
+   */
+  protected static final String SUB_APP_USER = "sessionManagement3SubAppUser";
+
   public static String getLevelHash() {
     return levelHash;
   }
@@ -114,48 +120,36 @@ public class SessionManagement3 extends HttpServlet {
 
         callstmt =
             conn.prepareStatement(
-                "SELECT userName, userAddress, userRole FROM users WHERE userName = ?");
+                "SELECT userName, userAddress, userRole FROM users WHERE userName = ? AND"
+                    + " userPassword = SHA(?)");
         callstmt.setString(1, subName);
-        log.debug("Executing findUser");
+        callstmt.setString(2, subPass);
+        log.debug("Executing authUser");
+        // Every account authenticates the same way. Non-admin accounts used to be admitted on
+        // the strength of the user name alone, with the password never checked.
         ResultSet resultSet = callstmt.executeQuery();
         if (resultSet.next()) {
-          log.debug("User found");
+          // The signed-in identity is recorded server-side so the change-password servlet does
+          // not have to take the client's word for whose password it is changing.
+          ses.setAttribute(SUB_APP_USER, resultSet.getString(1));
           if (resultSet.getString(3).equalsIgnoreCase("admin")) {
-            log.debug("Admin Detected");
-            callstmt =
-                conn.prepareStatement(
-                    "SELECT userName, userAddress, userRole FROM users WHERE userName = ? AND"
-                        + " userPassword = SHA(?)");
-            callstmt.setString(1, subName);
-            callstmt.setString(2, subPass);
-            log.debug("Executing authUser");
-            ResultSet resultSet2 = callstmt.executeQuery();
-            if (resultSet2.next()) {
-              log.debug("Successful Admin Login");
-              // Get key and add it to the output
-              String userKey =
-                  Hash.generateUserSolution(levelResult, (String) ses.getAttribute("userName"));
+            log.debug("Successful Admin Login");
+            // Get key and add it to the output
+            String userKey =
+                Hash.generateUserSolution(levelResult, (String) ses.getAttribute("userName"));
 
-              htmlOutput =
-                  "<h2 class='title'>"
-                      + bundle.getString("response.welcome")
-                      + " "
-                      + Encode.forHtml(resultSet2.getString(1))
-                      + "</h2>"
-                      + "<p>"
-                      + bundle.getString("response.resultKey")
-                      + " <a>"
-                      + userKey
-                      + "</a>"
-                      + "</p>";
-            } else {
-              userAddress =
-                  bundle.getString("response.badPass")
-                      + " <a>"
-                      + Encode.forHtml(resultSet.getString(1))
-                      + "</a><br/>";
-              htmlOutput = makeTable(userAddress, bundle);
-            }
+            htmlOutput =
+                "<h2 class='title'>"
+                    + bundle.getString("response.welcome")
+                    + " "
+                    + Encode.forHtml(resultSet.getString(1))
+                    + "</h2>"
+                    + "<p>"
+                    + bundle.getString("response.resultKey")
+                    + " <a>"
+                    + userKey
+                    + "</a>"
+                    + "</p>";
           } else {
             log.debug("Successful Guest Login");
             htmlOutput =
@@ -168,7 +162,10 @@ public class SessionManagement3 extends HttpServlet {
                     + "</p><br/><br/>";
           }
         } else {
-          userAddress = bundle.getString("response.badUser") + "<br/>";
+          // One message for every failure, so the response cannot be used to tell which user
+          // names exist.
+          log.debug("Incorrect credentials");
+          userAddress = bundle.getString("response.badCredentials") + "<br/>";
           htmlOutput = makeTable(userAddress, bundle);
         }
         Database.closeConnection(conn);
