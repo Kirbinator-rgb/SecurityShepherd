@@ -540,8 +540,8 @@ public class Validate {
    * <p>Unlike {@link #isSameOriginRequest}, a request carrying neither Origin nor Referer is
    * accepted. Browsers set one of those themselves on any cross-site request, so their absence
    * marks a non-browser client, which has no victim's ambient cookies to ride. Endpoints whose
-   * primary defence against forgery is a session-bound token or a server-held identity use this,
-   * so the origin check stays as defence in depth without locking out ordinary API clients.
+   * primary defence against forgery is a session-bound token or a server-held identity use this, so
+   * the origin check stays as defence in depth without locking out ordinary API clients.
    *
    * @param request The request whose provenance is being checked
    * @return true when the request states an origin that is not this application's
