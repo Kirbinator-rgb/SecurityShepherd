@@ -76,8 +76,9 @@ public class CsrfChallengeTargetThree extends HttpServlet {
         // some non-empty csrfToken parameter was present let an attacker supply any value.
         Cookie tokenCookie = Validate.getToken(request.getCookies());
         Object tokenParameter = request.getParameter("csrfToken");
-        if (!Validate.validateTokens(tokenCookie, tokenParameter)) {
-          log.debug("Rejected request with missing or mismatched CSRF token");
+        if (!Validate.validateTokens(tokenCookie, tokenParameter)
+            || !Validate.isSameOriginRequest(request)) {
+          log.debug("Rejected request with a bad CSRF token or a foreign origin");
           out.write(csrfGenerics.getString("target.incrementFailed"));
           return;
         }

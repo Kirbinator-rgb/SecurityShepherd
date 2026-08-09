@@ -105,8 +105,9 @@ public class CsrfChallengeTargetFour extends HttpServlet {
           // user's nonce -- and, because "SELECT count(...)" always returns a row, accepted
           // anything whatsoever.
           if (MessageDigest.isEqual(
-              storedToken.getBytes(StandardCharsets.UTF_8),
-              csrfToken.getBytes(StandardCharsets.UTF_8))) {
+                  storedToken.getBytes(StandardCharsets.UTF_8),
+                  csrfToken.getBytes(StandardCharsets.UTF_8))
+              && Validate.isSameOriginRequest(request)) {
             log.debug("'Valid' Nonce Value Submitted");
             String userName = (String) ses.getAttribute("userName");
             String attackerName = Getter.getUserName(ApplicationRoot, plusId);

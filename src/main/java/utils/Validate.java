@@ -4,6 +4,7 @@ import java.math.BigInteger;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -512,5 +513,41 @@ public class Validate {
       return false;
     }
     return true;
+  }
+
+  /**
+   * Confirms a state-changing request was issued by a page of this application rather than by a
+   * third-party site. The browser sets Origin (and Referer) itself and a cross-site page cannot
+   * forge them, so this holds even when the request carries cookies (ASVS 3.5.2).
+   *
+   * @param request The request whose provenance is being checked
+   * @return true when the request states an origin belonging to this application
+   */
+  public static boolean isSameOriginRequest(HttpServletRequest request) {
+    String stated = request.getHeader("Origin");
+    if (stated == null || stated.isEmpty() || "null".equalsIgnoreCase(stated)) {
+      stated = request.getHeader("Referer");
+    }
+    if (stated == null || stated.isEmpty()) {
+      // Nothing to check against: a browser sends one of these on a cross-site form post, so
+      // treating the absence as untrusted fails closed.
+      log.error("Request carried neither Origin nor Referer; rejecting as cross-origin");
+      return false;
+    }
+    StringBuilder expected = new StringBuilder();
+    expected.append(request.getScheme()).append("://").append(request.getServerName());
+    int port = request.getServerPort();
+    boolean defaultPort =
+        ("http".equals(request.getScheme()) && port == 80)
+            || ("https".equals(request.getScheme()) && port == 443);
+    if (!defaultPort) {
+      expected.append(':').append(port);
+    }
+    String prefix = expected.toString();
+    boolean sameOrigin = stated.equals(prefix) || stated.startsWith(prefix + "/");
+    if (!sameOrigin) {
+      log.error("Rejected cross-origin request stating: " + stated);
+    }
+    return sameOrigin;
   }
 }
