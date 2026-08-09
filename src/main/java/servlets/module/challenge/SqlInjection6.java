@@ -77,13 +77,17 @@ public class SqlInjection6 extends HttpServlet {
       try {
         String userPin = (String) request.getParameter("pinNumber");
         log.debug("userPin - " + userPin);
-        // The quote-stripping and \x-decoding round-trip was the bug: decoding after
-        // sanitising reintroduced the quotes it had just removed. Bind the raw value.
+        userPin =
+            userPin.replaceAll("\\\\", "\\\\\\\\").replaceAll("'", ""); // Escape single quotes
+        log.debug("userPin scrubbed - " + userPin);
+        userPin =
+            java.net.URLDecoder.decode(
+                userPin.replaceAll("\\\\\\\\x", "%"), "UTF-8"); // Decode \x encoding
+        log.debug("searchTerm decoded to - " + userPin);
         Connection conn = Database.getChallengeConnection(applicationRoot, "SqlChallengeSix");
         log.debug("Looking for users");
         PreparedStatement prepstmt =
-            conn.prepareStatement("SELECT userName FROM users WHERE userPin = ?");
-        prepstmt.setString(1, userPin);
+            conn.prepareStatement("SELECT userName FROM users WHERE userPin = '" + userPin + "'");
         ResultSet users = prepstmt.executeQuery();
         try {
           if (users.next()) {
