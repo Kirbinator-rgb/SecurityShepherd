@@ -47,13 +47,8 @@ public class CsrfChallengeTargetOne extends HttpServlet {
    *
    * @param userId User identifier to be incremented
    */
-  // The endpoint still answers GET so the page keeps working, but the anti-forgery token is
-  // required either way, so an img/iframe load cannot trigger the state change (ASVS 3.5.1).
-  public void doGet(HttpServletRequest request, HttpServletResponse response)
-      throws ServletException, IOException {
-    doPost(request, response);
-  }
-
+  // ASVS 3.5.3: a state change must not be reachable by a "safe" method like GET, which any
+  // img/iframe load can trigger. The counter is incremented on POST only.
   public void doPost(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     // Setting IpAddress To Log and taking header for original IP if forwarded from proxy
