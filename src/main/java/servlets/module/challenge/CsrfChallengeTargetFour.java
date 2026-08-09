@@ -84,11 +84,11 @@ public class CsrfChallengeTargetFour extends HttpServlet {
         if (ses.getAttribute(csrfTokenName) == null
             || ses.getAttribute(csrfTokenName).toString().isEmpty()) {
           log.debug("No CSRF Token found in session");
-          storedToken =
-              Setter.setCsrfChallengeFourCsrfToken(userId, Hash.randomString(), ApplicationRoot);
-          out.write(
-              csrfGenerics.getString("target.noTokenNewToken") + " " + storedToken + "<br><br>");
+          // The nonce is kept in the session and never written to the response. Echoing it,
+          // and storing it in a table shared by every user, is what made it reusable.
+          storedToken = Hash.randomString();
           ses.setAttribute(csrfTokenName, storedToken);
+          out.write(csrfGenerics.getString("target.noTokenNewToken") + "<br><br>");
         } else {
           storedToken = "" + ses.getAttribute(csrfTokenName);
         }
