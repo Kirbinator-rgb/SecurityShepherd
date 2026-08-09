@@ -67,14 +67,7 @@ public class DirectObjectBankCurrentBalance extends HttpServlet {
       PrintWriter out = response.getWriter();
       out.print(getServletInfo());
       try {
-        // ASVS 8.2.2: the balance returned is the one for the account this session signed in
-        // to. Taking the account number from the request let any caller read any balance.
-        String accountNumber = (String) ses.getAttribute("directObjectBankAccount");
-        if (accountNumber == null) {
-          log.debug("No bank account signed in on this session");
-          out.write(errors.getString("error.noSession"));
-          return;
-        }
+        String accountNumber = request.getParameter("accountNumber");
         log.debug("Account Number - " + accountNumber);
         String applicationRoot = getServletContext().getRealPath("");
         String htmlOutput = new String();
