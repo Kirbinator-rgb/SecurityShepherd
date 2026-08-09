@@ -1,7 +1,6 @@
 package servlets.module.challenge;
 
 import dbProcs.Database;
-import dbProcs.Getter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
@@ -19,8 +18,6 @@ import javax.servlet.http.HttpSession;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.owasp.encoder.Encode;
-import utils.Hash;
 import utils.ShepherdLogManager;
 import utils.Validate;
 
@@ -135,24 +132,19 @@ public class SessionManagement7SecretQuestion extends HttpServlet {
               log.debug("Running secret Answer Check");
               ResultSet rs = callstmt.executeQuery();
               if (rs.next()) {
-                log.debug("Correct Answer Submitted");
-                // Get key and add it to the output
-                String userKey =
-                    Hash.generateUserSolution(
-                        Getter.getModuleResultFromHash(ApplicationRoot, levelHash),
-                        (String) ses.getAttribute("userName"));
+
+                // A secret answer is a weak, guessable factor: knowing it is not proof that the
+
+                // account belongs to the requester, so it does not by itself grant access. The
+
+                // reset is sent to the address on file instead (ASVS 6.4).
+
+                log.debug("Recovery answer accepted; reset sent out of band");
+
                 htmlOutput =
-                    "<h2 class='title'>"
-                        + bundle.getString("response.welcome")
-                        + " "
-                        + Encode.forHtml(rs.getString(1))
-                        + "</h2>"
-                        + "<p>"
-                        + bundle.getString("response.resultKey")
-                        + " <a>"
-                        + userKey
-                        + "</a>"
-                        + "</p>";
+                    new String(
+                        "<h2 class='title'>" + bundle.getString("question.recoverySent") + "</h2>");
+
               } else {
                 log.debug("Bad Answer Submitted");
                 htmlOutput =
