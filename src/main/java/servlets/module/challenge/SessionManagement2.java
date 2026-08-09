@@ -138,9 +138,9 @@ public class SessionManagement2 extends HttpServlet {
                   + "</a>"
                   + "</p>";
         } else {
-          // One message for every failure. Confirming the user name and handing back the
-          // address on file let an attacker enumerate accounts and collect the address the
-          // password reset endpoint keys on (ASVS 3.2.3, 7.2.1).
+          // One message for every failure. Naming the account, or handing back its address,
+          // told an attacker which usernames exist and gave them the address the password
+          // reset endpoint keys on.
           log.debug("Incorrect credentials");
           userAddress = bundle.getString("response.badCredentials") + "<br/>";
           htmlOutput = makeTable(userAddress, bundle);
